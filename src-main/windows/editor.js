@@ -3,14 +3,10 @@ const path = require('path');
 const nodeURL = require('url');
 const zlib = require('zlib');
 const nodeCrypto = require('crypto');
-const {app, dialog} = require('electron');
+const {app, dialog, shell} = require('electron');
 const ProjectRunningWindow = require('./project-running-window');
-const AddonsWindow = require('./addons');
-const DesktopSettingsWindow = require('./desktop-settings');
-const PrivacyWindow = require('./privacy');
-const AboutWindow = require('./about');
 const PackagerWindow = require('./packager');
-const {createAtomicWriteStream} = require('../atomic-write-stream');
+const {createAtomicWriteStream, writeFileAtomic} = require('../atomic-write-stream');
 const {translate, updateLocale, getStrings} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const prompts = require('../prompts');
@@ -19,6 +15,10 @@ const privilegedFetch = require('../fetch');
 const RichPresence = require('../rich-presence.js');
 const FileAccessWindow = require('./file-access-window.js');
 const ExtensionDocumentationWindow = require('./extension-documentation.js');
+const AbstractWindow = require('./abstract');
+const {isUpdateCheckerAllowed} = require('../update-checker');
+const {getDist, getPlatform} = require('../platform');
+const packageJSON = require('../../package.json');
 
 const TYPE_FILE = 'file';
 const TYPE_URL = 'url';
@@ -302,6 +302,8 @@ class EditorWindow extends ProjectRunningWindow {
       this.updateRichPresence();
     });
 
+    this.updateRichPresence();
+
     this.ipc.on('is-initially-fullscreen', (e) => {
       e.returnValue = isInitiallyFullscreen;
     });
@@ -523,20 +525,37 @@ class EditorWindow extends ProjectRunningWindow {
       EditorWindow.newWindow();
     });
 
-    this.ipc.handle('open-addon-settings', (event, search) => {
-      AddonsWindow.show(search);
+    this.window.webContents.on('will-frame-navigate', (event) => {
+      if (!event.isMainFrame && /^https?:/.test(event.url)) {
+        event.preventDefault();
+        require('../open-external')(event.url);
+      }
     });
 
-    this.ipc.handle('open-desktop-settings', () => {
-      DesktopSettingsWindow.show();
+    this.ipc.on('get-about-info', (event) => {
+      event.returnValue = {
+        version: packageJSON.version,
+        dist: getDist(),
+        electron: process.versions.electron,
+        platform: getPlatform(),
+        arch: process.arch
+      };
     });
 
-    this.ipc.handle('open-privacy', () => {
-      PrivacyWindow.show();
-    });
-
-    this.ipc.handle('open-about', () => {
-      AboutWindow.show();
+    this.ipc.handle('export-settings', async (event, exportedSettings) => {
+      const result = await dialog.showSaveDialog(this.window, {
+        defaultPath: path.join(app.getPath('downloads'), 'mistwarp-addon-settings.json'),
+        filters: [
+          {
+            name: 'JSON',
+            extensions: ['json']
+          }
+        ]
+      });
+      if (result.canceled) {
+        return;
+      }
+      await writeFileAtomic(result.filePath, exportedSettings);
     });
 
     this.ipc.handle('get-advanced-customizations', async () => {
@@ -566,6 +585,69 @@ class EditorWindow extends ProjectRunningWindow {
 
     this.ipc.handle('set-is-full-screen', (event, isFullScreen) => {
       this.isInEditorFullScreen = !!isFullScreen;
+    });
+
+    this.ipc.on('get-desktop-settings', (event) => {
+      event.returnValue = {
+        updateCheckerAllowed: isUpdateCheckerAllowed(),
+        updateChecker: settings.updateChecker,
+        microphone: settings.microphone,
+        camera: settings.camera,
+        hardwareAcceleration: settings.hardwareAcceleration,
+        backgroundThrottling: settings.backgroundThrottling,
+        bypassCORS: settings.bypassCORS,
+        spellchecker: settings.spellchecker,
+        exitFullscreenOnEscape: settings.exitFullscreenOnEscape,
+        richPresenceAvailable: RichPresence.isAvailable(),
+        richPresence: settings.richPresence
+      };
+    });
+
+    this.ipc.handle('set-desktop-setting', async (event, key, value) => {
+      switch (key) {
+        case 'updateChecker':
+          settings.updateChecker = value;
+          break;
+        case 'microphone':
+          settings.microphone = value;
+          break;
+        case 'camera':
+          settings.camera = value;
+          break;
+        case 'hardwareAcceleration':
+          settings.hardwareAcceleration = value;
+          break;
+        case 'backgroundThrottling':
+          settings.backgroundThrottling = value;
+          AbstractWindow.settingsChanged();
+          break;
+        case 'bypassCORS':
+          settings.bypassCORS = value;
+          break;
+        case 'spellchecker':
+          settings.spellchecker = value;
+          AbstractWindow.settingsChanged();
+          break;
+        case 'exitFullscreenOnEscape':
+          settings.exitFullscreenOnEscape = value;
+          break;
+        case 'richPresence':
+          settings.richPresence = value;
+          if (value) {
+            RichPresence.enable();
+            this.updateRichPresence();
+          } else {
+            RichPresence.disable();
+          }
+          break;
+        default:
+          throw new Error(`Unknown desktop setting: ${key}`);
+      }
+      await settings.save();
+    });
+
+    this.ipc.handle('open-user-data', () => {
+      shell.showItemInFolder(app.getPath('userData'));
     });
 
     this.loadURL('tw-editor://./gui/gui.html');
@@ -606,6 +688,26 @@ class EditorWindow extends ProjectRunningWindow {
   }
 
   handleWindowOpen (details) {
+    if (details.url === 'about:blank' && details.features.includes('mistwarpAddonWindow')) {
+      const features = {};
+      for (const feature of details.features.split(',')) {
+        const [key, value] = feature.split('=');
+        features[key] = value;
+      }
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          parent: this.window,
+          fullscreenable: false,
+          minWidth: +features.minWidth || 200,
+          minHeight: +features.minHeight || 150,
+          resizable: features.resizable !== '0',
+          alwaysOnTop: features.alwaysOnTop === '1',
+          backgroundColor: this.getBackgroundColor()
+        }
+      };
+    }
+
     const url = new URL(details.url);
     const params = new URLSearchParams(url.search);
 

@@ -34,7 +34,7 @@
   <body>
     <main>
       <script>
-        document.body.setAttribute('update-checker', PrivacyPreload.isUpdateCheckerAllowed());
+        document.body.setAttribute('update-checker', new URLSearchParams(location.search).get('updateChecker') !== 'false');
       </script>
 
       <h1>Privacy Policy</h1>
@@ -55,7 +55,7 @@
       <script>
         for (const el of document.querySelectorAll('.open-desktop-settings')) {
           el.addEventListener('click', () => {
-            PrivacyPreload.openDesktopSettings();
+            window.parent.postMessage({mwOpenWindow: 'settings'}, '*');
           });
         }
       </script>

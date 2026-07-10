@@ -28,16 +28,14 @@ const FILE_SCHEMES = {
     secure: true,
     embeddable: true, // migration helper
   },
-  'tw-desktop-settings': {
-    root: path.resolve(__dirname, '../src-renderer/desktop-settings'),
-    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
-  },
   'tw-privacy': {
     root: path.resolve(__dirname, '../src-renderer/privacy'),
+    embeddable: true,
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
   },
   'tw-about': {
     root: path.resolve(__dirname, '../src-renderer/about'),
+    embeddable: true,
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
   },
   'tw-packager': {

@@ -6,10 +6,18 @@ const base = {
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     devtool: process.env.NODE_ENV === 'production' ? false : 'cheap-source-map',
     target: 'web',
+    resolve: {
+        // GUI-pinned lucide (webpack 4 cannot parse lucide 1.x ESM) + CJS rotur-sdk
+        alias: {
+            'lucide-react': path.resolve(__dirname, 'node_modules/scratch-gui/node_modules/lucide-react'),
+            'rotur-sdk': path.resolve(__dirname, 'node_modules/scratch-gui/node_modules/rotur-sdk/dist/index.js')
+        },
+        mainFields: ['browser', 'main', 'module']
+    },
     module: {
         rules: [
             {
-                test: /\.jsx?$/,
+                test: /\.m?jsx?$/,
                 loader: 'babel-loader',
                 options: {
                     presets: ['@babel/preset-env', '@babel/preset-react']

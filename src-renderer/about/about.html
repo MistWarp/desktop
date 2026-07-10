@@ -32,7 +32,9 @@
       <h1>TurboWarp Desktop <span class="version"></span></h1>
       <p class="more-version"></p>
       <script>
-        var info = AboutPreload.getInfo();
+        var info = typeof AboutPreload !== 'undefined' ?
+          AboutPreload.getInfo() :
+          Object.fromEntries(new URLSearchParams(location.search));
         document.querySelector('.version').textContent = info.version;
         document.querySelector('.more-version').textContent = `(Debug info: Electron ${info.electron}, Platform ${info.platform} ${info.arch}, Distribution ${info.dist})`;
       </script>

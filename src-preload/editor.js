@@ -11,11 +11,12 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   setLocale: (locale) => ipcRenderer.sendSync('set-locale', locale),
   setChanged: (changed) => ipcRenderer.invoke('set-changed', changed),
   openNewWindow: () => ipcRenderer.invoke('open-new-window'),
-  openAddonSettings: (search) => ipcRenderer.invoke('open-addon-settings', search),
   openPackager: () => ipcRenderer.invoke('open-packager'),
-  openDesktopSettings: () => ipcRenderer.invoke('open-desktop-settings'),
-  openPrivacy: () => ipcRenderer.invoke('open-privacy'),
-  openAbout: () => ipcRenderer.invoke('open-about'),
+  getDesktopSettings: () => ipcRenderer.sendSync('get-desktop-settings'),
+  setDesktopSetting: (key, value) => ipcRenderer.invoke('set-desktop-setting', key, value),
+  openUserData: () => ipcRenderer.invoke('open-user-data'),
+  getAboutInfo: () => ipcRenderer.sendSync('get-about-info'),
+  exportAddonSettings: (settings) => ipcRenderer.invoke('export-settings', settings),
   getPreferredMediaDevices: () => ipcRenderer.invoke('get-preferred-media-devices'),
   getAdvancedCustomizations: () => ipcRenderer.invoke('get-advanced-customizations'),
   setExportForPackager: (callback) => {
@@ -25,6 +26,10 @@ contextBridge.exposeInMainWorld('EditorPreload', {
 });
 
 let exportForPackager = () => Promise.reject(new Error('exportForPackager missing'));
+
+ipcRenderer.on('open-in-app', (e, what) => {
+  window.postMessage({mwOpenWindow: what}, '*');
+});
 
 ipcRenderer.on('export-project-to-port', (e) => {
   const port = e.ports[0];

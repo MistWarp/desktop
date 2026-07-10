@@ -32,10 +32,10 @@ const {translate} = require('./l10n');
 const {getPlatform} = require('./platform');
 const settings = require('./settings');
 
-// Ask GarboMuffin for changes
-// https://discord.com/developers/applications
+// MistWarp Discord application id (works with Discord IPC and arRPC).
+// large_image is a public URL so bridges without portal assets still show an icon.
 const APPLICATION_ID = '1458217703742378044';
-const LARGE_IMAGE_NAME = 'icon';
+const LARGE_IMAGE_NAME = 'https://raw.githubusercontent.com/MistWarp/desktop/master/art/rich-presence-icon.png';
 
 const OP_HANDSHAKE = 0;
 const OP_FRAME = 1;
@@ -514,8 +514,11 @@ class RichPresence {
       args: {
         pid: process.pid,
         activity: {
+          // Required for arRPC when the app id is not in Discord's catalog
+          name: APP_NAME,
           // Needs to be at least 2 characters long and not more than 128, otherwise it is rejected
           details: title.padEnd(2, ' ').substring(0, 128),
+          state: 'Editing with MistWarp',
           timestamps: {
             start: this.activityStartTime,
           },

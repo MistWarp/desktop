@@ -7,8 +7,11 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
     steps:
       - uses: vedantmgoyal9/winget-releaser@19e706d4c9121098010096f9c495a70a7518b30f
+        if: env.WINGET_TOKEN != ''
         with:
           identifier: Mistium.MistWarp
           installers-regex: 'MistWarp-Setup-[\d.]+-\w+\.exe$'

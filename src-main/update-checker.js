@@ -4,7 +4,8 @@ const packageJSON = require('../package.json');
 const privilegedFetch = require('./fetch');
 
 const currentVersion = packageJSON.version;
-const URL = 'https://desktop.turbowarp.org/version.json';
+const LATEST_RELEASE_API = 'https://api.github.com/repos/MistWarp/desktop/releases/latest';
+const ALL_RELEASES_API = 'https://api.github.com/repos/MistWarp/desktop/releases?per_page=1';
 
 /**
  * Determines whether the update checker is even allowed to be enabled
@@ -21,30 +22,26 @@ const isUpdateCheckerAllowed = () => {
 };
 
 const checkForUpdates = async () => {
-  if (!isUpdateCheckerAllowed() || settings.updateChecker === 'never') {
+  if (!isUpdateCheckerAllowed() || settings.updateChecker === 'never' || settings.updateChecker === 'security') {
     return;
   }
 
-  const json = await privilegedFetch.json(URL);
-  const latestStable = json.latest;
-  const latestUnstable = json.latest_unstable;
-  const oldestSafe = json.oldest_safe;
+  const includeUnstable = settings.updateChecker === 'unstable';
+  const json = await privilegedFetch.json(includeUnstable ? ALL_RELEASES_API : LATEST_RELEASE_API);
+  const release = Array.isArray(json) ? json[0] : json;
+  if (!release || typeof release.tag_name !== 'string') {
+    return;
+  }
 
   // Imported lazily as it takes about 10ms to import
   const semverLt = require('semver/functions/lt');
+  const semverValid = require('semver/functions/valid');
 
-  // Security updates can not be ignored.
-  if (semverLt(currentVersion, oldestSafe)) {
-    UpdateWindow.updateAvailable(currentVersion, latestStable, true);
+  const latest = release.tag_name.replace(/^v/, '');
+  if (!semverValid(latest)) {
     return;
   }
 
-  if (settings.updateChecker === 'security') {
-    // Nothing further to check
-    return;
-  }
-
-  const latest = settings.updateChecker === 'unstable' ? latestUnstable : latestStable;
   const now = Date.now();
   const ignoredUpdate = settings.ignoredUpdate;
   const ignoredUpdateUntil = settings.ignoredUpdateUntil * 1000;

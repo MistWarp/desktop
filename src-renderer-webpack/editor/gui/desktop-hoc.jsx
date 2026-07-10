@@ -4,8 +4,10 @@ import PropTypes from 'prop-types';
 import {
   openLoadingProject,
   closeLoadingProject,
-  openInvalidProjectModal
+  openInvalidProjectModal,
+  openSettingsModal
 } from 'scratch-gui/src/reducers/modals';
+import WindowManager from 'scratch-gui/src/addons/window-system/window-manager';
 import {
   requestProjectUpload,
   setProjectId,
@@ -34,8 +36,37 @@ const getDefaultProjectTitle = (filename) => {
   return match[1];
 };
 
+const openIframeWindow = (id, title, url, width, height) => {
+  const existing = WindowManager.getWindow(id);
+  if (existing) {
+    existing.show().bringToFront();
+    return;
+  }
+  const win = WindowManager.createWindow({
+    id,
+    title,
+    width,
+    height,
+    minWidth: 400,
+    minHeight: 300
+  });
+  const iframe = document.createElement('iframe');
+  iframe.src = url;
+  iframe.style.cssText = 'border:none;display:block;width:100%;height:100%;flex:1;background:var(--ui-modal-background,#fff);';
+  win.setContent(iframe);
+  win.show();
+  if (win.popup) {
+    win.popup.addEventListener('message', (e) => {
+      if (e.source !== win.popup) {
+        window.postMessage(e.data, '*');
+      }
+    });
+  }
+};
+
 const handleClickAddonSettings = (search) => {
-  EditorPreload.openAddonSettings(typeof search === 'string' ? search : null);
+  const hash = typeof search === 'string' && search ? `#${search}` : '';
+  openIframeWindow('addonSettings', 'Addon Settings', `tw-editor://./addons/addons.html${hash}`, 700, 650);
 };
 
 const handleClickNewWindow = () => {
@@ -46,20 +77,18 @@ const handleClickPackager = () => {
   EditorPreload.openPackager();
 };
 
-const handleClickDesktopSettings = () => {
-  EditorPreload.openDesktopSettings();
-};
-
 const handleClickPrivacy = () => {
-  EditorPreload.openPrivacy();
+  const updateCheckerAllowed = EditorPreload.getDesktopSettings().updateCheckerAllowed;
+  openIframeWindow('privacyPolicy', 'Privacy Policy', `tw-privacy://./privacy.html?updateChecker=${updateCheckerAllowed}`, 700, 650);
 };
 
 const handleClickAbout = () => {
-  EditorPreload.openAbout();
+  const info = EditorPreload.getAboutInfo();
+  openIframeWindow('aboutWindow', 'About', `tw-about://./about.html?${new URLSearchParams(info)}`, 750, 650);
 };
 
 const handleClickSourceCode = () => {
-  window.open('https://github.com/TurboWarp');
+  window.open('https://github.com/MistWarp');
 };
 
 const securityManager = {
@@ -84,6 +113,7 @@ const DesktopHOC = function (WrappedComponent) {
         title: ''
       };
       this.handleUpdateProjectTitle = this.handleUpdateProjectTitle.bind(this);
+      this.handleWindowMessage = this.handleWindowMessage.bind(this);
 
       // Changing locale always re-mounts this component
       const stateFromMain = EditorPreload.setLocale(this.props.locale);
@@ -101,6 +131,8 @@ const DesktopHOC = function (WrappedComponent) {
       }
     }
     componentDidMount () {
+      window.addEventListener('message', this.handleWindowMessage);
+
       EditorPreload.setExportForPackager(() => this.props.vm.saveProjectSb3('arraybuffer')
         .then((buffer) => ({
           name: this.state.title,
@@ -176,6 +208,25 @@ const DesktopHOC = function (WrappedComponent) {
         EditorPreload.setIsFullScreen(this.props.isFullScreen);
       }
     }
+    componentWillUnmount () {
+      window.removeEventListener('message', this.handleWindowMessage);
+    }
+    handleWindowMessage (e) {
+      if (e.data && typeof e.data.mwExportAddonSettings === 'string') {
+        EditorPreload.exportAddonSettings(e.data.mwExportAddonSettings);
+        return;
+      }
+      const what = e.data && e.data.mwOpenWindow;
+      if (what === 'settings') {
+        this.props.onOpenSettingsModal();
+      } else if (what === 'about') {
+        handleClickAbout();
+      } else if (what === 'addons') {
+        handleClickAddonSettings();
+      } else if (what === 'privacy') {
+        handleClickPrivacy();
+      }
+    }
     handleUpdateProjectTitle (newTitle) {
       this.setState({
         title: newTitle
@@ -197,6 +248,7 @@ const DesktopHOC = function (WrappedComponent) {
         onSetFileHandle,
         onSetReduxUsername,
         onShowErrorModal,
+        onOpenSettingsModal,
         vm,
         ...props
       } = this.props;
@@ -209,23 +261,21 @@ const DesktopHOC = function (WrappedComponent) {
           onClickPackager={handleClickPackager}
           onClickAbout={[
             {
-              title: this.messages['in-app-about.desktop-settings'],
-              onClick: handleClickDesktopSettings
-            },
-            {
               title: this.messages['in-app-about.privacy'],
-              onClick: handleClickPrivacy
+              onClick: handleClickPrivacy,
+              icon: 'shield'
             },
             {
               title: this.messages['in-app-about.about'],
-              onClick: handleClickAbout
+              onClick: handleClickAbout,
+              icon: 'info'
             },
             {
               title: this.messages['in-app-about.source-code'],
-              onClick: handleClickSourceCode
+              onClick: handleClickSourceCode,
+              icon: 'code'
             },
           ]}
-          onClickDesktopSettings={handleClickDesktopSettings}
           securityManager={securityManager}
           {...props}
         />
@@ -251,6 +301,7 @@ const DesktopHOC = function (WrappedComponent) {
     onSetFileHandle: PropTypes.func.isRequired,
     onSetReduxUsername: PropTypes.func.isRequired,
     onShowErrorModal: PropTypes.func.isRequired,
+    onOpenSettingsModal: PropTypes.func.isRequired,
     vm: PropTypes.shape({
       loadProject: PropTypes.func.isRequired
     }).isRequired
@@ -285,7 +336,8 @@ const DesktopHOC = function (WrappedComponent) {
     onShowErrorModal: error => {
       dispatch(setProjectError(error));
       dispatch(openInvalidProjectModal());
-    }
+    },
+    onOpenSettingsModal: () => dispatch(openSettingsModal())
   });
 
   return connect(

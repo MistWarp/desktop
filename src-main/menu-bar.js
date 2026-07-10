@@ -3,11 +3,18 @@ const {translate} = require('./l10n');
 const openExternal = require('./open-external');
 const {APP_NAME} = require('./brand');
 const AbstractWindow = require('./windows/abstract');
-const AboutWindow = require('./windows/about');
-const DesktopSettingsWindow = require('./windows/desktop-settings');
-const AddonsWindow = require('./windows/addons');
 const EditorWindow = require('./windows/editor');
 const PackagerWindow = require('./windows/packager');
+
+const openInEditor = (what) => {
+  const editors = AbstractWindow.getWindowsByClass(EditorWindow);
+  if (editors.length === 0) {
+    return;
+  }
+  const focused = editors.find((editor) => editor.window.isFocused()) || editors[0];
+  focused.window.focus();
+  focused.window.webContents.send('open-in-app', what);
+};
 
 const rebuildMenuBar = () => {
   if (process.platform === 'darwin') {
@@ -18,7 +25,7 @@ const rebuildMenuBar = () => {
           {
             label: translate('menu.about').replace('{APP_NAME}', APP_NAME),
             click: () => {
-              AboutWindow.show();
+              openInEditor('about');
             }
           },
           {
@@ -28,13 +35,13 @@ const rebuildMenuBar = () => {
             label: translate('menu.settings'),
             accelerator: 'Cmd+,',
             click: () => {
-              DesktopSettingsWindow.show()
+              openInEditor('settings');
             }
           },
           {
             label: translate('menu.addons'),
             click: () => {
-              AddonsWindow.show();
+              openInEditor('addons');
             }
           },
           {

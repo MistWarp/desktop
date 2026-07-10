@@ -1,3 +1,4 @@
+import './iframe-bridge.js';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import AddonSettings from 'scratch-gui/src/addons/settings/settings.jsx';
