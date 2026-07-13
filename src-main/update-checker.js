@@ -22,9 +22,13 @@ const isUpdateCheckerAllowed = () => {
 };
 
 const checkForUpdates = async () => {
-  if (!isUpdateCheckerAllowed() || settings.updateChecker === 'never' || settings.updateChecker === 'security') {
+  if (!isUpdateCheckerAllowed() || settings.updateChecker === 'never') {
     return;
   }
+
+  // The GitHub releases API has no oldest_safe field, so "security only" can no longer be
+  // distinguished from a normal update. Fall back to notifying about stable releases rather
+  // than silently delivering no updates at all to users who picked this option.
 
   const includeUnstable = settings.updateChecker === 'unstable';
   const json = await privilegedFetch.json(includeUnstable ? ALL_RELEASES_API : LATEST_RELEASE_API);
