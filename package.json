@@ -72,6 +72,7 @@
       "node_modules/**/*",
       "src-main/**/*",
       "src-preload/**/*",
+      "src-protocol-error/**/*",
       "src-renderer/**/*",
       "dist-renderer-webpack/**/*",
       "dist-library-files/**/*",

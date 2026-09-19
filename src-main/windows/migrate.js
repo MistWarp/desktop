@@ -5,7 +5,7 @@ const {translate, getStrings, getLocale} = require('../l10n');
 const settings = require('../settings');
 const {APP_NAME} = require('../brand');
 
-const EMAIL = 'contact@turbowarp.org';
+const SUPPORT = 'mist@mistium.com';
 
 class MigrateWindow extends AbstractWindow {
   static LATEST_VERSION = 3;
@@ -57,7 +57,7 @@ class MigrateWindow extends AbstractWindow {
         title: APP_NAME,
         type: 'warning',
         message: translate('migrate.continue-anyways-afterword')
-          .replace('{email}', EMAIL)
+          .replace('{email}', SUPPORT)
       });
     }
 
@@ -95,7 +95,7 @@ class MigrateWindow extends AbstractWindow {
     const button = dialog.showMessageBoxSync(this.window, {
       type: 'error',
       title: APP_NAME,
-      message: `${translate('migrate.renderer-gone')} ${EMAIL}`
+      message: `${translate('migrate.renderer-gone')} ${SUPPORT}`
         .replace('{code}', details.exitCode)
         .replace('{reason}', details.reason),
       buttons: [

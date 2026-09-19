@@ -222,7 +222,8 @@ let isMigrating = true;
 let migratePromise = null;
 
 app.on('second-instance', (event, argv, workingDirectory) => {
-  migratePromise.then(() => {
+  app.whenReady().then(() => migratePromise).then(() => {
+    if (isMigrating) return;
     const commandLineOptions = parseCommandLine(argv);
     EditorWindow.openFiles(commandLineOptions.files, commandLineOptions.fullscreen, workingDirectory);
   });

@@ -68,7 +68,9 @@ class OpenedFile {
     if (this.type === TYPE_SAMPLE) {
       const sampleRoot = path.resolve(__dirname, '../../dist-extensions/samples/');
       const resolvedPath = path.join(sampleRoot, this.path);
-      if (resolvedPath.startsWith(sampleRoot)) {
+      const relativePath = path.relative(sampleRoot, resolvedPath);
+      if (relativePath && relativePath !== '..' && !relativePath.startsWith(`..${path.sep}`) &&
+          !path.isAbsolute(relativePath)) {
         const compressedPath = `${resolvedPath}.br`;
         const compressedData = await fsPromises.readFile(compressedPath);
 

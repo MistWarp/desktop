@@ -218,7 +218,7 @@ const DesktopHOC = function (WrappedComponent) {
       }
       const what = e.data && e.data.mwOpenWindow;
       if (what === 'settings') {
-        this.props.onOpenSettingsModal();
+        this.props.onOpenSettingsModal('desktop');
       } else if (what === 'about') {
         handleClickAbout();
       } else if (what === 'addons') {
@@ -337,7 +337,7 @@ const DesktopHOC = function (WrappedComponent) {
       dispatch(setProjectError(error));
       dispatch(openInvalidProjectModal());
     },
-    onOpenSettingsModal: () => dispatch(openSettingsModal())
+    onOpenSettingsModal: view => dispatch(openSettingsModal(view))
   });
 
   return connect(
