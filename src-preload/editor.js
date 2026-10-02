@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   getDesktopSettings: () => ipcRenderer.sendSync('get-desktop-settings'),
   setDesktopSetting: (key, value) => ipcRenderer.invoke('set-desktop-setting', key, value),
   openUserData: () => ipcRenderer.invoke('open-user-data'),
+  roturAuthorize: (authorizeUrl) => ipcRenderer.invoke('rotur-authorize', authorizeUrl),
   getAboutInfo: () => ipcRenderer.sendSync('get-about-info'),
   exportAddonSettings: (settings) => ipcRenderer.invoke('export-settings', settings),
   getPreferredMediaDevices: () => ipcRenderer.invoke('get-preferred-media-devices'),

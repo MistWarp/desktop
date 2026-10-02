@@ -13,6 +13,8 @@ const prompts = require('../prompts');
 const settings = require('../settings');
 const privilegedFetch = require('../fetch');
 const RichPresence = require('../rich-presence.js');
+const {authorizeWithLoopback} = require('../rotur-loopback');
+const openExternal = require('../open-external');
 const FileAccessWindow = require('./file-access-window.js');
 const ExtensionDocumentationWindow = require('./extension-documentation.js');
 const AbstractWindow = require('./abstract');
@@ -651,6 +653,8 @@ class EditorWindow extends ProjectRunningWindow {
     this.ipc.handle('open-user-data', () => {
       shell.showItemInFolder(app.getPath('userData'));
     });
+
+    this.ipc.handle('rotur-authorize', (event, authorizeUrl) => authorizeWithLoopback(authorizeUrl, openExternal));
 
     this.loadURL('tw-editor://./gui/gui.html');
     this.show();
